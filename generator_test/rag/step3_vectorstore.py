@@ -1,15 +1,22 @@
 """
-step3_vectorstore.py — BDD vectorielle ChromaDB + LangChain
+step3_vectorstore.py — BDD vectorielle pgvector + LangChain
 ============================================================
-Version ChromaDB (développement local).
+Version pgvector (PostgreSQL existant — déploiement EPF).
 
-Pour migrer vers pgvector plus tard : remplacer ce fichier par
-la version pgvector — l'interface est identique (aliases garantis).
+Interface IDENTIQUE à la version ChromaDB (aliases garantis).
+Pour revenir à ChromaDB : remplacer ce fichier, rien d'autre ne change.
 
-Stockage : rag/output/chromadb/
+Table créée automatiquement dans PostgreSQL :
+  langchain_pg_collection / langchain_pg_embedding
 
 Installation :
-    pip install langchain-chroma chromadb langchain-huggingface
+    pip install pgvector psycopg2-binary langchain-postgres langchain-huggingface
+
+.env requis :
+    DATABASE_URL=postgresql://postgres:password@localhost:5432/mathutrice
+
+Prérequis SQL (une fois) :
+    CREATE EXTENSION IF NOT EXISTS vector;
 
 Emplacement : generator_test/rag/step3_vectorstore.py
 """
@@ -22,15 +29,34 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-# ── Chemins ────────────────────────────────────────────
+# ── Chemins (compatibilité avec l'ancien code ChromaDB) ─
 _THIS_DIR  = Path(__file__).resolve().parent
 OUT_DIR    = _THIS_DIR / "output"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-CHROMA_DIR = OUT_DIR / "chromadb"
-STORE_PATH = OUT_DIR / "vectorstore.pkl"   # conservé pour compatibilité
+# Conservés pour compatibilité — non utilisés avec pgvector
+CHROMA_DIR  = OUT_DIR / "chromadb"
+STORE_PATH  = OUT_DIR / "vectorstore.pkl"
 
 COLLECTION_NAME = "mathutrice_rag"
+
+
+# ══════════════════════════════════════════════════════════
+# CONNEXION
+# ══════════════════════════════════════════════════════════
+
+def _get_connection_string() -> str:
+    """Lit DATABASE_URL depuis .env ou variables d'environnement."""
+    from dotenv import load_dotenv
+    load_dotenv()
+
+    url = os.getenv("DATABASE_URL")
+    if not url:
+        raise ValueError(
+            "DATABASE_URL non défini dans .env\n"
+            "Exemple : DATABASE_URL=postgresql://postgres:password@localhost:5432/mathutrice"
+        )
+    return url
 
 
 # ══════════════════════════════════════════════════════════
@@ -38,7 +64,7 @@ COLLECTION_NAME = "mathutrice_rag"
 # ══════════════════════════════════════════════════════════
 
 def _get_langchain_embeddings():
-    """Solon FR (sentence-transformers)."""
+    """Solon FR (sentence-transformers) — identique à ChromaDB."""
     try:
         from langchain_huggingface import HuggingFaceEmbeddings
         embeddings = HuggingFaceEmbeddings(
@@ -67,7 +93,7 @@ def _chunks_to_documents(chunks: list[dict]):
     docs = []
     for c in chunks:
         m = c.get("metadata", {})
-        # ChromaDB n'accepte que str/int/float/bool dans les métadonnées
+        # pgvector stocke les métadonnées en JSONB — pas de restriction de type
         flat_meta = {
             "chunk_id"      : str(c.get("id", "")),
             "notion"        : str(m.get("notion", "")),
@@ -106,33 +132,34 @@ def _document_to_chunk(doc) -> dict:
 
 
 # ══════════════════════════════════════════════════════════
-# CLASSE PRINCIPALE — ChromaVectorStore
+# CLASSE PRINCIPALE — PGVectorStore
 # ══════════════════════════════════════════════════════════
 
-class ChromaVectorStore:
+class PGVectorStore:
     """
-    BDD vectorielle ChromaDB avec LangChain.
-    Interface identique à la version pgvector — aucun autre
-    fichier ne change lors d'une migration.
+    BDD vectorielle pgvector avec LangChain.
+    Interface identique à ChromaVectorStore — aucun autre
+    fichier ne change.
     """
 
     def __init__(self, chroma_dir=None, collection_name: str = COLLECTION_NAME):
-        self.chroma_dir      = Path(chroma_dir) if chroma_dir else CHROMA_DIR
+        # chroma_dir ignoré (compat signature) — pgvector utilise PostgreSQL
         self.collection_name = collection_name
         self._store          = None
         self._embeddings     = None
 
     def _init_store(self, embeddings=None):
-        """Initialise ou charge le store ChromaDB."""
-        from langchain_chroma import Chroma
+        """Initialise ou charge le store pgvector."""
+        from langchain_postgres.vectorstores import PGVector
 
         self._embeddings = embeddings or _get_langchain_embeddings()
-        self.chroma_dir.mkdir(parents=True, exist_ok=True)
+        conn_str         = _get_connection_string()
 
-        self._store = Chroma(
-            collection_name    = self.collection_name,
-            embedding_function = self._embeddings,
-            persist_directory  = str(self.chroma_dir),
+        self._store = PGVector(
+            embeddings      = self._embeddings,
+            collection_name = self.collection_name,
+            connection      = conn_str,
+            use_jsonb       = True,   # métadonnées en JSONB → filtres SQL
         )
         return self._store
 
@@ -143,31 +170,43 @@ class ChromaVectorStore:
         if self._store is None:
             self._init_store()
         try:
-            data = self._store.get()
-            docs = []
-            for i, text in enumerate(data.get("documents", [])):
-                meta = data.get("metadatas", [{}])[i] if i < len(data.get("metadatas", [])) else {}
-                from langchain_core.documents import Document
-                docs.append(Document(page_content=text, metadata=meta))
+            docs = self._store.similarity_search("", k=10000)
             return [_document_to_chunk(d) for d in docs]
         except Exception:
             return []
 
     def __len__(self) -> int:
-        """Nombre de chunks indexés."""
+        """Nombre de chunks indexés (requête directe PostgreSQL)."""
         if self._store is None:
             self._init_store()
         try:
-            return self._store._collection.count()
+            from psycopg2 import connect
+            from urllib.parse import urlparse
+
+            url  = urlparse(_get_connection_string())
+            conn = connect(
+                host     = url.hostname,
+                port     = url.port or 5432,
+                dbname   = url.path.lstrip("/"),
+                user     = url.username,
+                password = url.password,
+            )
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT COUNT(*) FROM langchain_pg_embedding e "
+                "JOIN langchain_pg_collection c ON e.collection_id = c.uuid "
+                "WHERE c.name = %s",
+                (self.collection_name,)
+            )
+            count = cur.fetchone()[0]
+            conn.close()
+            return count
         except Exception:
-            try:
-                return len(self._store.get().get("documents", []))
-            except Exception:
-                return 0
+            return len(self.chunks)
 
     # ── Ajout ───────────────────────────────────────────
     def add(self, chunks: list[dict], embeddings=None):
-        """Indexe les chunks dans ChromaDB."""
+        """Indexe les chunks dans pgvector."""
         import time
         if not chunks:
             return
@@ -175,22 +214,22 @@ class ChromaVectorStore:
         if self._store is None:
             self._init_store(embeddings)
 
-        print(f"  ChromaDB : indexation de {len(chunks)} chunks...")
+        print(f"  pgvector : indexation de {len(chunks)} chunks...")
         t0   = time.perf_counter()
         docs = _chunks_to_documents(chunks)
         ids  = [str(c.get("id", f"chunk_{i}")) for i, c in enumerate(chunks)]
 
         self._store.add_documents(documents=docs, ids=ids)
         dt = time.perf_counter() - t0
-        print(f"  ChromaDB : ✓ {len(chunks)} chunks indexés en {dt:.1f}s")
+        print(f"  pgvector : ✓ {len(chunks)} chunks indexés en {dt:.1f}s")
 
     # ── Recherche ────────────────────────────────────────
     def search(self, query: str, k: int = 5,
                filters: dict = None) -> list[dict]:
         """
-        Recherche sémantique avec filtres optionnels.
+        Recherche sémantique avec filtres sur les métadonnées.
 
-        Filtres ChromaDB (where) :
+        Filtres (syntaxe LangChain PGVector) :
             {"notion": "trigonométrie"}
             {"difficulte": {"$lte": 3}}
         """
@@ -206,12 +245,11 @@ class ChromaVectorStore:
             results = []
             for doc, score in docs_scores:
                 chunk      = _document_to_chunk(doc)
-                # ChromaDB retourne une distance → convertir en similarité
                 similarity = max(0.0, 1.0 - score)
                 results.append({"chunk": chunk, "score": similarity})
             return results
         except Exception as e:
-            logger.error(f"ChromaDB search error: {e}")
+            logger.error(f"pgvector search error: {e}")
             return []
 
     def get_by_id(self, chunk_id: str) -> Optional[dict]:
@@ -219,14 +257,11 @@ class ChromaVectorStore:
         if self._store is None:
             self._init_store()
         try:
-            data = self._store.get(ids=[chunk_id])
-            if data.get("documents"):
-                from langchain_core.documents import Document
-                doc = Document(
-                    page_content = data["documents"][0],
-                    metadata     = data["metadatas"][0],
-                )
-                return _document_to_chunk(doc)
+            results = self._store.similarity_search(
+                "", k=1, filter={"chunk_id": chunk_id}
+            )
+            if results:
+                return _document_to_chunk(results[0])
         except Exception:
             pass
         return None
@@ -250,21 +285,21 @@ class ChromaVectorStore:
 
     # ── Sauvegarde / Chargement ──────────────────────────
     def save(self, path=None):
-        """ChromaDB persiste automatiquement (persist_directory)."""
-        logger.debug("ChromaDB : persistance automatique")
+        """pgvector persiste automatiquement dans PostgreSQL."""
+        logger.debug("pgvector : persistance automatique dans PostgreSQL")
 
     @classmethod
     def load(cls, path=None, chroma_dir=None,
-             collection_name: str = COLLECTION_NAME) -> "ChromaVectorStore":
-        """Charge le store ChromaDB existant."""
-        store = cls(chroma_dir=chroma_dir, collection_name=collection_name)
+             collection_name: str = COLLECTION_NAME) -> "PGVectorStore":
+        """Charge le store pgvector existant."""
+        store = cls(collection_name=collection_name)
         store._init_store()
         try:
             count = len(store)
-            print(f"  ChromaDB chargé : {count} chunks "
+            print(f"  pgvector chargé : {count} chunks "
                   f"(collection '{collection_name}')")
         except Exception as e:
-            logger.warning(f"ChromaDB : erreur chargement — {e}")
+            logger.warning(f"pgvector : erreur chargement — {e}")
         return store
 
     # ── Stats ────────────────────────────────────────────
@@ -291,7 +326,7 @@ class ChromaVectorStore:
                 sum(1 for c in chunks if c["metadata"].get("llm_enriched"))
                 / len(chunks) * 100
             ) if chunks else 0,
-            "backend"          : "chromadb",
+            "backend"          : "pgvector",
         }
 
 
@@ -299,27 +334,32 @@ class ChromaVectorStore:
 # ALIASES — compatibilité avec le reste du code
 # ══════════════════════════════════════════════════════════
 
-PGVectorStore       = ChromaVectorStore
-LocalVectorStore    = ChromaVectorStore
-SemanticVectorStore = ChromaVectorStore
+# Tous les fichiers qui importaient ChromaVectorStore
+# fonctionnent sans modification
+ChromaVectorStore   = PGVectorStore
+LocalVectorStore    = PGVectorStore
+SemanticVectorStore = PGVectorStore
 
 
 # ══════════════════════════════════════════════════════════
 # FONCTION run() — point d'entrée step3
 # ══════════════════════════════════════════════════════════
 
-def run(chunks: list[dict]) -> ChromaVectorStore:
-    """Indexe les chunks dans ChromaDB. Appelé par run_pipeline_batch.py."""
-    store = ChromaVectorStore()
+def run(chunks: list[dict]) -> PGVectorStore:
+    """Indexe les chunks dans pgvector. Appelé par run_pipeline_batch.py."""
+    store = PGVectorStore()
     store.add(chunks)
     return store
 
 
 if __name__ == "__main__":
-    print("ChromaDB store — test connexion")
+    print("pgvector store — test connexion")
     try:
-        store = ChromaVectorStore.load()
+        store = PGVectorStore.load()
         print(store.stats())
     except Exception as e:
         print(f"Erreur : {e}")
-        print("Vérifier : pip install langchain-chroma chromadb")
+        print("Vérifier :")
+        print("  - DATABASE_URL dans .env")
+        print("  - CREATE EXTENSION vector; dans PostgreSQL")
+        print("  - pip install pgvector psycopg2-binary langchain-postgres")
