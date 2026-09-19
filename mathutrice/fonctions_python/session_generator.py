@@ -20,10 +20,10 @@ from sqlmodel import Session, select
 from mathutrice import models
 from mathutrice.fonctions_python.base_generator import update_scores
 from mathutrice.fonctions_python.main import (
-    REFERENTIEL,
     generate_mixed_test,
     generate_exercise_randomly,
 )
+from mathutrice.referentiel import REFERENTIEL
 
 
 

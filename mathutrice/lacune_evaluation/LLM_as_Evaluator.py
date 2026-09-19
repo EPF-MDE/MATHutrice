@@ -1,8 +1,8 @@
 import json
 import re
 
-from mathutrice.fonctions_python.main import REFERENTIEL
-from mathutrice.fonctions_python.llm_client import client, MODEL
+from mathutrice.referentiel import REFERENTIEL
+from mathutrice.llm_client import client, MODEL
 
 
 def _build_flat_competences(referentiel):
