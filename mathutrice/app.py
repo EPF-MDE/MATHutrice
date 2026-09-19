@@ -20,6 +20,7 @@ from mathutrice.database import Session as DBSession
 from apscheduler.schedulers.background import BackgroundScheduler
 from decimal import Decimal
 from mathutrice import models
+from mathutrice.referentiel import REFERENTIEL
 import msal
 import uvicorn
 import shutil
@@ -134,16 +135,13 @@ elif DEV_LOGIN_KEY:
 
 # Refuse de démarrer sans LLM_BASE_URL, LLM_API_KEY et LLM_MODEL.
 # Tout ce qui suit importe le client LLM, d'où la place de ces imports.
-from mathutrice.fonctions_python.llm_client import client, MODEL  # noqa: E402
+from mathutrice.llm_client import client, MODEL  # noqa: E402
 from mathutrice.fonctions_python.chatbot import (  # noqa: E402
     chat,
     chat_stream_with_history,
     reset_conversation,
 )
-from mathutrice.fonctions_python.main import (  # noqa: E402
-    REFERENTIEL,
-    generate_mixed_test,
-)
+from mathutrice.fonctions_python.main import generate_mixed_test  # noqa: E402
 from mathutrice.fonctions_python.session_generator import (  # noqa: E402
     build_notion_data_with_scores,
     generate_next_question,

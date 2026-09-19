@@ -21,7 +21,7 @@ import re
 import json
 import logging
 
-from mathutrice.fonctions_python.llm_client import client, MODEL
+from mathutrice.llm_client import client, MODEL
 
 # from generator_test.lacune_evaluation.LLM_as_Evaluator import competences_dict
 # from main import REFERENTIEL
