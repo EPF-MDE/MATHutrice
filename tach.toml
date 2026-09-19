@@ -1,0 +1,46 @@
+# The generic rule, in full. Adding a package, or a private folder inside an
+# existing one, requires no edit to this file.
+
+source_roots = ["."]
+
+# tach's default exclude list contains "**/tests". Restating the list without it
+# is what puts the top-level test suite under the same rules as any other
+# consumer: tests reach packages through their public surface, or not at all.
+exclude = ["**/*__pycache__", "**/*egg-info", "**/docs", "**/venv", "**/.venv"]
+
+# Note: this covers dependencies *declared* below via `depends_on`, which the
+# generic rule deliberately does not use. It is set so that it holds if you
+# later fill in the layering stub. Cycles between the real imports are caught by
+# `python scripts/check_cycles.py`, which reads the actual graph from `tach map`.
+forbid_circular_dependencies = true
+
+# Code outside every package -- the top-level tests, and loose modules sitting
+# at the root package level -- belongs to tach's "<root>" module.
+root_module = "allow"
+
+# Every immediate subpackage of the root package is a deep module.
+[[modules]]
+path = "mathutrice.*"
+
+# Declared with no `depends_on`, so application code and tests may use any
+# package, while still being bound by every package's interface.
+[[modules]]
+path = "<root>"
+
+# No `from` key, so every module adopts this interface. A name is importable
+# from outside its package only if every segment of its path starts with
+# something other than "_" -- i.e. "private means a name starting with _".
+[[interfaces]]
+expose = ["[^_][^.]*(\\.[^_][^.]*)*"]
+
+# Layering stub. Uncomment to constrain *which* packages may depend on which:
+# a module may depend on its own layer and any layer below it, never above.
+# This is a separate concern from interface hiding and is off by default.
+#
+# [[layers]]
+# name = "app"
+#
+# [[layers]]
+# name = "domain"
+#
+# ...then add `layer = "domain"` to a module's [[modules]] block.
