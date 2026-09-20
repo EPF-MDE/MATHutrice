@@ -218,6 +218,7 @@ mathutrice.db
 # macOS
 .DS_Store
 
-# Claude Code local state
-.claude/worktrees/
-.claude/settings.local.json
+# Claude Code
+#  Local agent state (worktrees, session data). CLAUDE.md at the repository root
+#  is the shared, tracked part; nothing under .claude/ is.
+.claude/
