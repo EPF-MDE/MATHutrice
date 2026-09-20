@@ -28,19 +28,20 @@ From the repository root:
 uvicorn mathutrice.app:app --port 8000
 ```
 
-Expected: a `WARNING: AUTH_MODE=dev` line, then `Application startup complete`.
+Expected, on a fresh database: a `WARNING: AUTH_MODE=dev` line, a
+`Base initialisée : ... lignes insérées.` line, then `Application startup
+complete`. The seeding line only appears when there was something to insert.
 
 The application must refuse to start when a required setting is missing: with `LLM_API_KEY` emptied, startup fails with `ValueError: LLM_API_KEY missing`.
 
 ## 3. Check in the browser
 
 1. Open <http://localhost:8000/>. You are redirected to `/dev/login`, and a red dev-mode banner shows on every page.
-2. Sign in as a Student with an address ending in `@epfedu.fr`. You land on the home page.
-3. Open the chat and ask a question. The answer appears word by word (streaming).
+2. Sign in as the seeded Student, `eleve@epf.fr`, or with any other address ending in `@epf.fr` or `@epfedu.fr`. You land on the home page.
+3. The home page lists the seven seeded modules. Open one: its page shows the notion's description and your progression on its competences.
+4. Open the chat and ask a question. The answer appears word by word (streaming).
 
-Modules and training need seeded notions, which a fresh database does not have yet (#20).
-
-Step 3 calls the **LLM endpoint**. An `Erreur: ...` message in the chat means the endpoint, key or model in `.env` is wrong.
+Step 4 calls the **LLM endpoint**. An `Erreur: ...` message in the chat means the endpoint, key or model in `.env` is wrong.
 
 ## 4. Check from the command line
 
