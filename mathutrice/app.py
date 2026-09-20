@@ -909,7 +909,7 @@ class TrainingStartedRequest(BaseModel):
 
 class EvaluationRequest(BaseModel):
     notion_key: str
-    n_questions: int = 10
+    n_questions: int = 8
 
 
 # ------------------------------------------------------------------
@@ -2149,7 +2149,7 @@ async def evaluation_endpoint(
         )
 
     try:
-        n = max(5, min(20, data.n_questions))
+        n = max(5, min(8, data.n_questions))
 
         n_bas = max(1, round(n * 0.2))
         n_sol = max(1, round(n * 0.5))
