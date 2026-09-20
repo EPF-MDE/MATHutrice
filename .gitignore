@@ -213,3 +213,8 @@ __marimo__/
 *.pdf
 # Local SQLite database (DATABASE_URL in .env.example), created in the directory the app starts from
 mathutrice.db
+
+# Claude Code
+#  Local agent state (worktrees, session data). CLAUDE.md at the repository root
+#  is the shared, tracked part; nothing under .claude/ is.
+.claude/
