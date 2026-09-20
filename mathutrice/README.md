@@ -68,3 +68,6 @@ uv run python scripts/check_cycles.py
 
 A clean exit means every import in the repo goes through a public surface. A
 violation names the offending import, so there is nothing to hunt for.
+
+Both commands also run on every push and every pull request, in
+`.github/workflows/architecture.yml`.
