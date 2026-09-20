@@ -21,6 +21,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from decimal import Decimal
 from mathutrice import models
 from mathutrice.referentiel import REFERENTIEL
+from mathutrice.seed import seed_missing
 import msal
 import uvicorn
 import shutil
@@ -85,6 +86,7 @@ def cleanup_old_conversations():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_db_and_tables()
+    seed_missing(engine)
 
     scheduler = BackgroundScheduler()
     scheduler.add_job(cleanup_old_conversations, "interval", hours=1)
