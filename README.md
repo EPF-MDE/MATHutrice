@@ -69,6 +69,10 @@ Every variable the application reads is listed, with comments, in
 | `REDIRECT_URL` | Where Entra sends the user back after sign-in — this host's `/auth`. |
 | `POST_LOGOUT_REDIRECT_URL` | Where Entra sends the user after sign-out — this host's `/test_login`. |
 
+The LLM defaults in `.env.example` use the Mistral API: get a key at
+<https://console.mistral.ai> (a free account works). Any other OpenAI-compatible
+endpoint works by changing the three `LLM_*` variables.
+
 No key belongs in the repository. `.env` is not committed; `.env.example` holds
 names and placeholders only.
 
