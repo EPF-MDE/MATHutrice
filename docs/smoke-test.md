@@ -18,7 +18,7 @@ If `uv sync` reports `No interpreter found for Python 3.14.7`, your uv predates 
 
 Without uv, `pip install -e .` in a virtual environment running that Python version installs the project as well, from `pyproject.toml` rather than the lockfile.
 
-In `.env`, set `LLM_API_KEY` to the key for your LLM endpoint. Leave everything else as it is.
+In `.env`, set `LLM_API_KEY` to the key for your LLM endpoint. The default endpoint is Mistral: get a key at <https://console.mistral.ai> (a free account works). Leave everything else as it is.
 
 ## 2. Start
 
