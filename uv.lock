@@ -55,6 +55,15 @@ wheels = [
 ]
 
 [[package]]
+name = "backoff"
+version = "2.2.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/47/d7/5bbeb12c44d7c4f2fb5b56abce497eb5ed9f34d85701de869acedd602619/backoff-2.2.1.tar.gz", hash = "sha256:03f829f5bb1923180821643f8753b0502c3b682293992485b0eef2807afa5cba", size = 17001, upload-time = "2022-10-05T19:19:32.061Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/df/73/b6e24bd22e6720ca8ee9a85a0c4a2971af8497d8f3193fa05390cbd46e09/backoff-2.2.1-py3-none-any.whl", hash = "sha256:63579f9a0628e06278f7e47b7d7d5b6ce20dc65c5e96a6f3ca99a6adca0396e8", size = 15148, upload-time = "2022-10-05T19:19:30.546Z" },
+]
+
+[[package]]
 name = "certifi"
 version = "2026.7.22"
 source = { registry = "https://pypi.org/simple" }
@@ -238,6 +247,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/cd/eb/77b0cc7fc0235b0495b32410edebe14cf6757b826135a7f92bb0f5d843b9/detect_installer-0.2.1.tar.gz", hash = "sha256:85f889d4d19c1caf5bef89ef389eb920cd8c6c2a868e1eeceec24527b93021e7", size = 3634, upload-time = "2026-09-02T14:14:38.961Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/61/fe/a245e1d579e7abf47208f7c1ce5684caa2cd956ede5ff646d66d0299d9e8/detect_installer-0.2.1-py3-none-any.whl", hash = "sha256:87e2ce7d05cb108b178f8e45bb80d3d88c0cb4b397983345c18ad6562e02e620", size = 5371, upload-time = "2026-09-02T14:14:38.106Z" },
+]
+
+[[package]]
+name = "distro"
+version = "1.9.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/fc/f8/98eea607f65de6527f8a2e8885fc8015d3e6f5775df186e443e0964a11c3/distro-1.9.0.tar.gz", hash = "sha256:2fa77c6fd8940f116ee1d6b94a2f90b13b5ea8d019b98bc8bafdcabcdd9bdbed", size = 60722, upload-time = "2023-12-24T09:54:32.31Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl", hash = "sha256:7bffd925d65168f85027d8da9af6bddab658135b840670a223589bc0c8ef02b2", size = 20277, upload-time = "2023-12-24T09:54:30.421Z" },
 ]
 
 [[package]]
@@ -666,6 +684,9 @@ dependencies = [
     { name = "mistralai" },
     { name = "msal" },
     { name = "openai" },
+    { name = "opentelemetry-exporter-otlp-proto-http" },
+    { name = "opentelemetry-sdk" },
+    { name = "posthog" },
     { name = "psycopg2-binary" },
     { name = "pydantic" },
     { name = "python-dotenv" },
@@ -691,6 +712,9 @@ requires-dist = [
     { name = "mistralai", specifier = "==1.12.3" },
     { name = "msal", specifier = "==1.36.0" },
     { name = "openai", specifier = "==3.14.1" },
+    { name = "opentelemetry-exporter-otlp-proto-http", specifier = "==1.44.0" },
+    { name = "opentelemetry-sdk", specifier = "==1.44.0" },
+    { name = "posthog", specifier = "==7.60.0" },
     { name = "psycopg2-binary", specifier = "==2.9.12" },
     { name = "pydantic", specifier = "==2.13.4" },
     { name = "python-dotenv", specifier = "==1.2.2" },
@@ -862,6 +886,21 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/8f/73/0cbdebcb4cf545fdd328da14f5137e37d0770c3f26185e478b0d15d94f50/opentelemetry_semantic_conventions-0.65b0.tar.gz", hash = "sha256:f9b2b81e9d5b64f11bc952075e7e9c7fb0aab075c7fd1c46d597f1b919852d60", size = 148774, upload-time = "2026-07-16T15:25:46.902Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a6/0e/49df70d9b81fb5cbae4bbf2a49d865b09bcbcbc4eb53f5851b1027738d78/opentelemetry_semantic_conventions-0.65b0-py3-none-any.whl", hash = "sha256:1cacde7b0ad306f84c5ef08c3dbe1bbaf20165bba6f8bff43b670e555a086bcb", size = 204645, upload-time = "2026-07-16T15:25:30.688Z" },
+]
+
+[[package]]
+name = "posthog"
+version = "7.60.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "backoff" },
+    { name = "distro" },
+    { name = "requests" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/bd/16/b5d1489bae5ef5bd20c85b5b95f2b44609926b4ddb6c86794213ce1a832b/posthog-7.60.0.tar.gz", hash = "sha256:6c1ab0f0d31c83b47a3cf6b6829d4ee83f250a4f8844c4c24adae329982d3f36", size = 689157, upload-time = "2026-09-23T16:34:43.475Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/75/23/212a7007dc70dc58b4273c461dbac794844065639935573a129356f80931/posthog-7.60.0-py3-none-any.whl", hash = "sha256:48ecc52c124d8262779bef4fd3dc268ef66a08905449700c4ddfe44f5b0027d1", size = 805784, upload-time = "2026-09-23T16:34:41.242Z" },
 ]
 
 [[package]]
