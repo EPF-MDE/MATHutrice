@@ -29,10 +29,10 @@ from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
 from opentelemetry.sdk.resources import Resource
-import logging
 import uvicorn
 import shutil
 import os
+import logging
 import uuid
 import json
 import hmac
