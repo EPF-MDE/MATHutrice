@@ -21,6 +21,9 @@ dependencies = [
     "pydantic==2.13.4",
     "starlette==0.52.1",
     "sympy==1.14.0",
+    "posthog==7.60.0",
+    "opentelemetry-sdk==1.44.0",
+    "opentelemetry-exporter-otlp-proto-http==1.44.0",
 ]
 
 [build-system]
