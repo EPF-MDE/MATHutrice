@@ -4,7 +4,7 @@ LLM-based tutor that helps EPF first-year students practise mathematical tools.
 
 Students pick a notion (trigonometry, for example), see their progression on the competences it covers, and train on generated exercises (multiple-choice and open-answer questions) that an LLM evaluates. A chat answers their questions as they go. Teachers upload course PDFs and follow their students; Admins can additionally view the application as another user (impersonation).
 
-The vocabulary used here and in the code (notion, competence, **connexion de développement**, **LLM endpoint**…) is defined in [`CONTEXT.md`](CONTEXT.md). Architecture decisions live in [`docs/adr/`](docs/adr/).
+Domain terms such as **connexion de développement**, **impersonation** and **LLM endpoint** are defined in [`CONTEXT.md`](CONTEXT.md). Architecture decisions live in [`docs/adr/`](docs/adr/).
 
 ## Run it locally
 
@@ -18,9 +18,9 @@ Requires [uv](https://docs.astral.sh/uv/). From the repository root:
 uv sync
 ```
 
-uv installs the Python version pinned in [`.python-version`](.python-version) (3.14) and the dependency versions locked in `uv.lock`, into `.venv/`. Activate it with `. .venv/bin/activate` (Windows: `.venv\Scripts\activate`), or prefix the commands below with `uv run`.
+uv installs Python 3.14.7 (pinned in [`.python-version`](.python-version)) and the dependencies locked in `uv.lock` into `.venv/`. If it reports `No interpreter found`, your uv is older than that Python release: run `uv self update` and retry. Activate the environment with `. .venv/bin/activate` (Windows: `.venv\Scripts\activate`), or prefix the commands below with `uv run`.
 
-Without uv, create a virtual environment with Python 3.14 and run `pip install -e .`; this installs from `pyproject.toml` rather than the lockfile.
+Without uv, `pip install -e .` in a Python 3.14 virtual environment works too.
 
 ### 2. Configure
 
@@ -30,7 +30,7 @@ The application reads its settings from environment variables, loaded from a `.e
 cp .env.example .env
 ```
 
-Then set `LLM_API_KEY` to the key for your LLM endpoint. The default endpoint is Mistral: get a key at <https://console.mistral.ai> (a free account works). The other defaults in `.env.example` are right for a local clone.
+Then fill in `LLM_API_KEY`, the key for your **LLM endpoint** (Mistral by default; `.env.example` says where to get one). Leave the rest as it is for a local clone. The comments in `.env.example` detail each variable; in short:
 
 | Variable | Default in `.env.example` | Purpose |
 | --- | --- | --- |
@@ -41,9 +41,7 @@ Then set `LLM_API_KEY` to the key for your LLM endpoint. The default endpoint is
 | `LLM_BASE_URL` | Mistral | OpenAI-compatible endpoint every LLM call goes through. Required. |
 | `LLM_MODEL` | `ministral-14b-latest` | Model served by that endpoint. Required. |
 | `LLM_API_KEY` | empty | Key for that endpoint. Required: you must fill it in. |
-| `CLIENT_ID`, `CLIENT_SECRET`, `TENANT_ID` | commented out | Entra app registration. Required when `AUTH_MODE=entra`, unused otherwise. |
-| `REDIRECT_URL` | commented out | Entra callback, the application's `/auth` route (e.g. `https://example.org/auth`). Required when `AUTH_MODE=entra`, unused otherwise. |
-| `POST_LOGOUT_REDIRECT_URL` | commented out | Where Entra sends the user after sign-out. Required when `AUTH_MODE=entra`, unused otherwise. |
+| `CLIENT_ID`, `CLIENT_SECRET`, `TENANT_ID`, `REDIRECT_URL`, `POST_LOGOUT_REDIRECT_URL` | commented out | Entra app registration; `REDIRECT_URL` is the application's `/auth` callback, `POST_LOGOUT_REDIRECT_URL` where Entra sends the user after sign-out. Required when `AUTH_MODE=entra`, unused in `dev`. |
 
 The application refuses to start when a required variable is missing (`ValueError: ... missing`) or when `AUTH_MODE` is neither `entra` nor `dev`.
 
@@ -74,7 +72,7 @@ Opening the application while signed out takes you to `/dev/login`. There you ca
 - The address must end in `@epfedu.fr` or `@epf.fr`, as with Entra.
 - The role you pick is stored on the user, replacing their previous role. If you leave it out, an existing user keeps theirs and a new one becomes a Student.
 - Students land on `/`, Teachers and Admins on `/teacher`.
-- `/logout` clears the session and brings you back to the sign-in page. `REDIRECT_URL` and `POST_LOGOUT_REDIRECT_URL` are not used in this mode.
+- `/logout` clears the session and redirects to `/`, which sends you back to the sign-in page. `REDIRECT_URL` and `POST_LOGOUT_REDIRECT_URL` are not used in this mode.
 
 ### `DEV_LOGIN_KEY`
 
@@ -105,7 +103,7 @@ curl -s -o /dev/null -w '%{http_code}\n' -b cookies.txt -c cookies.txt \
 # 200 (without the cookie: 307, a redirect to sign-in)
 ```
 
-Drop `-d key=...` when `DEV_LOGIN_KEY` is empty. The session lasts one hour.
+`$DEV_LOGIN_KEY` is a shell variable: `.env` does not set it for curl, so export it or paste the key in. Drop `-d key=...` when `DEV_LOGIN_KEY` is empty. The session lasts one hour.
 
 ## Deployment checklist
 
@@ -117,13 +115,13 @@ Before deploying to any environment real users can reach:
 - [ ] `DEV_LOGIN_KEY` empty (it is ignored in `entra` mode; the application warns if it is set).
 - [ ] Served over HTTPS: in `entra` mode, the session cookie is only sent over HTTPS.
 - [ ] `DATABASE_URL` points at PostgreSQL, not the local SQLite file.
-- [ ] `LLM_BASE_URL`, `LLM_MODEL` and `LLM_API_KEY` set for the production LLM endpoint. On Mistral's free plan, requests may be used for training: for real data, turn that off in the Mistral admin panel under Privacy.
+- [ ] `LLM_BASE_URL`, `LLM_MODEL` and `LLM_API_KEY` set for the production LLM endpoint. On Mistral's free plan, turn off training on your data (see `.env.example`).
 - [ ] [`docs/smoke-test.md`](docs/smoke-test.md) passes on the host.
 
 ## Contributing
 
 - Package boundaries are machine-checked: read [`mathutrice/README.md`](mathutrice/README.md) before adding a package or importing across one; `uv run tach check` enforces them.
-- Issues are tracked on GitHub; pull requests for the 2026–27 course target `course-2026` (see [ADR 0001](docs/adr/0001-course-2026-default-branch.md)).
+- Issues are tracked on [GitHub](https://github.com/EPF-MDE/MATHutrice/issues); pull requests for the 2026–27 course target `course-2026` (see [ADR 0001](docs/adr/0001-course-2026-default-branch.md)).
 
 ## License
 
