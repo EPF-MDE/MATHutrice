@@ -12,7 +12,8 @@ permissions:
   contents: read
 
 jobs:
-  boundaries:
+  architecture:
+    name: architecture
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
