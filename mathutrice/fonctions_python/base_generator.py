@@ -22,6 +22,7 @@ import json
 import logging
 
 from mathutrice.llm_client import client, MODEL
+from mathutrice.llm_deadline._deadline import LLMDeadline
 
 # from generator_test.lacune_evaluation.LLM_as_Evaluator import competences_dict
 # from main import REFERENTIEL
@@ -67,7 +68,11 @@ def parse_json(raw: str) -> dict:
 
 
 def call_mistral(
-    prompt: str, notion: str, parse_and_validate, post_process=None
+    prompt: str,
+    notion: str,
+    parse_and_validate,
+    post_process=None,
+    deadline: LLMDeadline | None = None,
 ) -> dict | None:
     """
     Appelle Mistral avec retry automatique (MAX_RETRIES tentatives).
@@ -78,15 +83,22 @@ def call_mistral(
       parse_and_validate : fonction spécifique au format qui valide le dict
       post_process     : fonction optionnelle appliquée après validation
                          (ex: apply_verification pour QCM)
+      deadline         : l'échéance du test d'évaluation en cours, partagée par
+                         tous ses appels ; DeadlineExceeded remonte à l'appelant
+                         (sans deadline, appel direct au client, comme avant)
 
     Retourne le dict validé (et post-traité si besoin), ou None si échec.
     """
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            response = client.chat.completions.create(
-                model=MODEL, messages=[{"role": "user", "content": prompt}]
-            )
-            raw = response.choices[0].message.content
+            messages = [{"role": "user", "content": prompt}]
+            if deadline is not None:
+                raw = deadline.complete(messages)
+            else:
+                response = client.chat.completions.create(
+                    model=MODEL, messages=messages
+                )
+                raw = response.choices[0].message.content
             question = parse_and_validate(raw)
 
             if post_process:
