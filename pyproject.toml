@@ -36,5 +36,11 @@ wheel-exclude = ["mathutrice/rag_documents"]
 
 [dependency-groups]
 dev = [
+    "pytest~=9.1.1",
     "tach~=0.35.0",
 ]
+
+[tool.pytest.ini_options]
+# The suite lives in tests/. `fonctions_python/test_entrainement.py` is part of
+# the application, not a test, despite its name.
+testpaths = ["tests"]
