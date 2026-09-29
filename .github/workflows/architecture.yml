@@ -2,7 +2,7 @@
 # every import crossing a package boundary reaches a public name, and no two
 # packages import each other. They are the commands a contributor runs locally,
 # so a red run here is reproducible with two lines in a terminal.
-name: Package boundaries
+name: Architecture
 
 on:
   push:
