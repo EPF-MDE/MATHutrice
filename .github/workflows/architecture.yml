@@ -1,8 +1,9 @@
 # Runs the two checks documented in mathutrice/README.md, "Running the check":
 # every import crossing a package boundary reaches a public name, and no two
 # packages import each other. They are the commands a contributor runs locally,
-# so a red run here is reproducible with two lines in a terminal.
-name: Package boundaries
+# so a red run here is reproducible with two lines in a terminal. The `test` job
+# runs the test suite the same way: `uv run pytest`.
+name: CI
 
 on:
   push:
@@ -33,3 +34,20 @@ jobs:
       - run: uv run tach check
 
       - run: uv run python scripts/check_cycles.py
+
+  # No `needs: boundaries`: each job reports on its own, so a boundary violation
+  # never hides a failing test, and either can be required on its own.
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.1.0
+        with:
+          enable-cache: true
+
+      # pytest is in the dev group, installed by a default sync like tach.
+      - run: uv sync
+
+      - run: uv run pytest
