@@ -125,5 +125,5 @@ runs:
           echo "Attempt $attempt: $url answered $status, waiting"
           sleep 15
         done
-        echo "$url did not answer 200 within 10 minutes" >&2
+        echo "$url did not answer 200 after 40 attempts" >&2
         exit 1

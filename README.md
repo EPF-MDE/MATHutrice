@@ -157,10 +157,11 @@ OpenID Connect, as its GitHub Environment, and stores no Azure password.
   take its locks. Each start creates the tables and inserts the reference data
   and the demonstration accounts again, so everything written since the last
   start is lost: scores, progressions, and the PDFs teachers uploaded.
-- **Staging, production and a local run share one Mistral account.** Both
-  environments use the same `LLM_API_KEY` as a contributor's `.env`, so they
-  spend one account's rate limit and quota: a local run that sends many requests
-  can make Mistral answer `429` to production's calls.
+- **Staging and production share one Mistral account, and so does a local run
+  with the same key.** Both environments hold the same `LLM_API_KEY`, so they
+  spend one account's rate limit and quota. A local `.env` holding that key too
+  spends it as well: a local run that sends many requests can make Mistral
+  answer `429` to production's calls.
 
 ## Layout
 
