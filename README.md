@@ -116,6 +116,53 @@ The first call answers `303` with a `Set-Cookie: session=…`. `role` is
 user's name, or one derived from the address. Add `-d 'key=…'` when
 `DEV_LOGIN_KEY` is set.
 
+## Deploying on Azure App Service
+
+`.github/workflows/architecture.yml` deploys this branch to two environments,
+`staging` and `production`, each an App Service app on one B1 plan in France
+Central, always on. Both hold generated data and no real users, so both sign in
+through the [connexion de développement](#connexion-de-développement-auth_modedev),
+each with its own `DEV_LOGIN_KEY` and its own `SESSION_SECRET`, and both keep
+SQLite. Those are the two exceptions to the deployment checklist above: an
+environment with real users signs in through Microsoft Entra ID and points
+`DATABASE_URL` at a database that outlives the container.
+
+- **Staging, on green.** A push whose `architecture` job passes is built into
+  one image, tagged with its commit and pushed to GHCR
+  (`ghcr.io/epf-mde/mathutrice:<commit>`), then deployed to staging.
+- **Production, by promotion only.** A run of the workflow started by hand reads
+  the image staging runs and deploys that same image to production. It never
+  builds one, so production only ever receives a commit staging has already
+  received.
+
+```sh
+gh workflow run architecture.yml --ref <branch>   # promote staging's image to production
+```
+
+Each environment's settings and secrets live in the GitHub Environment of the
+same name, never in a committed file: the variables `AZURE_CLIENT_ID`,
+`AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `AZURE_RESOURCE_GROUP`,
+`AZURE_WEBAPP_NAME`, `LLM_BASE_URL`, `LLM_MODEL`, `POSTHOG_HOST` and
+`POSTHOG_ENVIRONMENT`, and the secrets `SESSION_SECRET`, `DEV_LOGIN_KEY`,
+`LLM_API_KEY` and `POSTHOG_PROJECT_TOKEN`. Every deploy writes them to the app's
+settings (`.github/actions/deploy-to-app-service`), with `AUTH_MODE=dev` and
+`DATABASE_URL=sqlite:///./mathutrice.db`. The workflow logs in to Azure through
+OpenID Connect, as its GitHub Environment, and stores no Azure password.
+
+### Known limits
+
+- **The data is reset at every deploy and at every restart the platform
+  makes.** The SQLite file lives on the container's own disk, not on App
+  Service's lasting storage: `/home` is a network share on which SQLite cannot
+  take its locks. Each start creates the tables and inserts the reference data
+  and the demonstration accounts again, so everything written since the last
+  start is lost: scores, progressions, and the PDFs teachers uploaded.
+- **Staging and production share one Mistral account, and so does a local run
+  with the same key.** Both environments hold the same `LLM_API_KEY`, so they
+  spend one account's rate limit and quota. A local `.env` holding that key too
+  spends it as well: a local run that sends many requests can make Mistral
+  answer `429` to production's calls.
+
 ## Layout
 
 ```
