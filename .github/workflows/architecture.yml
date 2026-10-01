@@ -2,11 +2,25 @@
 # every import crossing a package boundary reaches a public name, and no two
 # packages import each other. They are the commands a contributor runs locally,
 # so a red run here is reproducible with two lines in a terminal.
+#
+# Then the deploy that waits on it, to two environments, each an App Service
+# app with its own settings and secrets, held in the GitHub Environment of the
+# same name:
+#
+# - staging: a push to the deployed branch whose `architecture` job passes is
+#   built into one image, tagged with its commit, and deployed to staging.
+# - production: only by promotion, a run started by hand (workflow_dispatch). It
+#   deploys the image staging runs, never one built for the occasion, so
+#   production only ever receives a commit staging has already received.
+#
+# Both log in to Azure through OpenID Connect, as their GitHub Environment: no
+# Azure password or publish profile is stored anywhere.
 name: Architecture
 
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -14,6 +28,8 @@ permissions:
 jobs:
   architecture:
     name: architecture
+    # A promotion builds nothing, so it has nothing to check.
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -34,3 +50,148 @@ jobs:
       - run: uv run tach check
 
       - run: uv run python scripts/check_cycles.py
+
+  # On a push to the deployed branch alone, once `architecture` has passed.
+  # The GitHub Environments accept deploys from that branch only.
+  deploy-staging:
+    name: deploy to staging
+    needs: architecture
+    if: github.event_name == 'push' && github.ref == 'refs/heads/course-2026-worked-example-lab3-deploy'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    # One deploy at a time per environment, in the order pushed; a newer push
+    # waiting replaces an older one waiting.
+    concurrency:
+      group: deploy-staging
+      cancel-in-progress: false
+    environment:
+      name: staging
+      url: https://${{ vars.AZURE_WEBAPP_NAME }}.azurewebsites.net
+    steps:
+      - uses: actions/checkout@v7
+
+      # One image per commit, tagged with it, so that whatever runs can be
+      # traced to the run that passed. A commit pushed twice is built once.
+      # The label links the package to this repository on GHCR.
+      - name: Build and push the image, unless it exists
+        id: image
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY,,}:$GITHUB_SHA"
+          echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          if docker manifest inspect "$image" > /dev/null 2>&1; then
+            echo "$image already built"
+          else
+            docker build \
+              --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+              --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+              -t "$image" .
+            docker push "$image"
+          fi
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to Azure
+        uses: azure/login@v3.1.0
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy the image to staging
+        uses: ./.github/actions/deploy-to-app-service
+        with:
+          image: ${{ steps.image.outputs.image }}
+          resource-group: ${{ vars.AZURE_RESOURCE_GROUP }}
+          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
+          session-secret: ${{ secrets.SESSION_SECRET }}
+          dev-login-key: ${{ secrets.DEV_LOGIN_KEY }}
+          llm-base-url: ${{ vars.LLM_BASE_URL }}
+          llm-model: ${{ vars.LLM_MODEL }}
+          llm-api-key: ${{ secrets.LLM_API_KEY }}
+          posthog-project-token: ${{ secrets.POSTHOG_PROJECT_TOKEN }}
+          posthog-host: ${{ vars.POSTHOG_HOST }}
+          posthog-environment: ${{ vars.POSTHOG_ENVIRONMENT }}
+
+  # The promotion, first half: ask staging which image it runs. It runs in the
+  # staging Environment to log in as staging, but deploys nothing there.
+  staging-image:
+    name: read the image staging runs
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    environment:
+      name: staging
+      deployment: false
+    outputs:
+      image: ${{ steps.read.outputs.image }}
+    steps:
+      - name: Log in to Azure
+        uses: azure/login@v3.1.0
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      # App Service reports the image as "DOCKER|<image>". Only an image this
+      # workflow built is promoted: anything else staging runs stops here.
+      - name: Read the image staging runs
+        id: read
+        env:
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          APP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
+        run: |
+          running=$(az webapp config show --resource-group "$RESOURCE_GROUP" --name "$APP_NAME" --query linuxFxVersion --output tsv)
+          image="${running#DOCKER|}"
+          case "$image" in
+            "ghcr.io/${GITHUB_REPOSITORY,,}:"*) ;;
+            *) echo "Staging runs $running, not an image this workflow built" >&2; exit 1 ;;
+          esac
+          echo "Staging runs $image"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+
+  # The promotion, second half: deploy that same image to production. Nothing is
+  # rebuilt; only production's own settings and secrets differ.
+  promote-production:
+    name: promote to production
+    needs: staging-image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    environment:
+      name: production
+      url: https://${{ vars.AZURE_WEBAPP_NAME }}.azurewebsites.net
+    steps:
+      # For the deploy action only: nothing is built from this checkout.
+      - uses: actions/checkout@v7
+
+      - name: Log in to Azure
+        uses: azure/login@v3.1.0
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy staging's image to production
+        uses: ./.github/actions/deploy-to-app-service
+        with:
+          image: ${{ needs.staging-image.outputs.image }}
+          resource-group: ${{ vars.AZURE_RESOURCE_GROUP }}
+          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
+          session-secret: ${{ secrets.SESSION_SECRET }}
+          dev-login-key: ${{ secrets.DEV_LOGIN_KEY }}
+          llm-base-url: ${{ vars.LLM_BASE_URL }}
+          llm-model: ${{ vars.LLM_MODEL }}
+          llm-api-key: ${{ secrets.LLM_API_KEY }}
+          posthog-project-token: ${{ secrets.POSTHOG_PROJECT_TOKEN }}
+          posthog-host: ${{ vars.POSTHOG_HOST }}
+          posthog-environment: ${{ vars.POSTHOG_ENVIRONMENT }}
