@@ -1,0 +1,14 @@
+# Only what the image needs is sent to the build. Listing what goes in, rather
+# than what stays out, keeps a local .env, database or virtual environment out
+# of the image without having to think of each one.
+*
+!pyproject.toml
+!uv.lock
+!.python-version
+!mathutrice
+
+# Runtime data and local leftovers inside the package.
+mathutrice/rag_documents
+**/__pycache__
+**/.env*
+**/*.db
