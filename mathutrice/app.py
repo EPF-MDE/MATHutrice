@@ -96,6 +96,14 @@ def cleanup_old_conversations():
 
 posthog_client = None
 
+# httpx logs every request with its full URL, and some LLM endpoints carry a
+# secret in their URL path: those records stay local, never exported.
+_URL_LOGGERS = [logging.Filter("httpx"), logging.Filter("httpcore")]
+
+
+def _is_exportable(record):
+    return not any(logger.filter(record) for logger in _URL_LOGGERS)
+
 
 def start_production_signals():
     """Starts PostHog error tracking and log forwarding.
@@ -140,9 +148,12 @@ def start_production_signals():
             )
         )
     )
-    logging.getLogger().addHandler(LoggingHandler(logger_provider=provider))
+    handler = LoggingHandler(logger_provider=provider)
+    handler.addFilter(_is_exportable)
+    logging.getLogger().addHandler(handler)
 
     return client, provider
+
 
 
 @asynccontextmanager
