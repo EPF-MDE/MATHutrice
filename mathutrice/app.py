@@ -153,6 +153,18 @@ def start_production_signals():
     return client, provider
 
 
+def report_caught_exception(exception):
+    """Reports an exception the code catches and answers for itself.
+
+    The request's context captures only an exception that leaves it, so one
+    caught on the way never reaches Error tracking unless it is reported here.
+    The report carries the context's identity, like any other. Does nothing
+    when POSTHOG_PROJECT_TOKEN is unset.
+    """
+    if posthog_client:
+        posthog_client.capture_exception(exception)
+
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -258,11 +270,6 @@ async def posthog_context(request: Request, call_next):
 
         if user and user.get("email"):
             posthog.identify_context(user["email"])
-
-        session_id = request.headers.get("X-POSTHOG-SESSION-ID")
-
-        if session_id:
-            posthog.set_context_session(session_id)
 
         return await call_next(request)
 
@@ -1172,7 +1179,9 @@ async def chat_stream_endpoint(
     full_response = []
 
     def generate():
-        for chunk in chat_stream_with_history(history):
+        for chunk in chat_stream_with_history(
+            history, report_failure=report_caught_exception
+        ):
             full_response.append(chunk)
             yield f"data: {chunk}\n\n"
 
