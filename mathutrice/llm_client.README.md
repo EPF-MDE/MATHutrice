@@ -5,6 +5,11 @@ this branch places an interface in front of it, wraps it, or changes a call
 site. What follows is what is true of the code today, so that whoever designs
 the seam designs from facts rather than from a reading of the source.
 
+**One slice of it now exists:** [`llm_deadline/`](llm_deadline/__init__.py)
+holds an evaluation test to one 5-minute deadline over all its calls, the
+number the Design Document (#59) gives. No call site uses it yet, so everything
+below still describes what runs.
+
 ## What the seam holds
 
 **How long a user waits for an answer.** Every runtime LLM call goes through the
