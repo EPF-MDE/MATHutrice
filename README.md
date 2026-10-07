@@ -9,7 +9,7 @@ the notions a student is weakest on. A free chat is available alongside the
 exercises. Teachers and admins get their own pages, including PDF upload.
 
 The vocabulary this project uses — *notion*, *competence*, **connexion de
-développement**, **LLM endpoint** — is defined in [`CONTEXT.md`](CONTEXT.md).
+développement**, **LLM endpoint** — is defined in [`GLOSSARY.md`](GLOSSARY.md).
 Decisions that shaped the code are in [`docs/adr/`](docs/adr/).
 
 ## Run it locally
