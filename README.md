@@ -142,8 +142,8 @@ gh workflow run architecture.yml --ref <branch>   # promote staging's image to p
 Each environment's settings and secrets live in the GitHub Environment of the
 same name, never in a committed file: the variables `AZURE_CLIENT_ID`,
 `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `AZURE_RESOURCE_GROUP`,
-`AZURE_WEBAPP_NAME`, `LLM_BASE_URL`, `LLM_MODEL`, `POSTHOG_HOST` and
-`POSTHOG_ENVIRONMENT`, and the secrets `SESSION_SECRET`, `DEV_LOGIN_KEY`,
+`AZURE_WEBAPP_NAME`, `LLM_MODEL`, `POSTHOG_HOST` and `POSTHOG_ENVIRONMENT`,
+and the secrets `SESSION_SECRET`, `DEV_LOGIN_KEY`, `LLM_BASE_URL`,
 `LLM_API_KEY` and `POSTHOG_PROJECT_TOKEN`. Every deploy writes them to the app's
 settings (`.github/actions/deploy-to-app-service`), with `AUTH_MODE=dev` and
 `DATABASE_URL=sqlite:///./mathutrice.db`. The workflow logs in to Azure through

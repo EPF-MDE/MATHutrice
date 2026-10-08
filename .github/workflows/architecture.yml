@@ -110,7 +110,7 @@ jobs:
           app-name: ${{ vars.AZURE_WEBAPP_NAME }}
           session-secret: ${{ secrets.SESSION_SECRET }}
           dev-login-key: ${{ secrets.DEV_LOGIN_KEY }}
-          llm-base-url: ${{ vars.LLM_BASE_URL }}
+          llm-base-url: ${{ secrets.LLM_BASE_URL }}
           llm-model: ${{ vars.LLM_MODEL }}
           llm-api-key: ${{ secrets.LLM_API_KEY }}
           posthog-project-token: ${{ secrets.POSTHOG_PROJECT_TOKEN }}
@@ -194,7 +194,7 @@ jobs:
           app-name: ${{ vars.AZURE_WEBAPP_NAME }}
           session-secret: ${{ secrets.SESSION_SECRET }}
           dev-login-key: ${{ secrets.DEV_LOGIN_KEY }}
-          llm-base-url: ${{ vars.LLM_BASE_URL }}
+          llm-base-url: ${{ secrets.LLM_BASE_URL }}
           llm-model: ${{ vars.LLM_MODEL }}
           llm-api-key: ${{ secrets.LLM_API_KEY }}
           posthog-project-token: ${{ secrets.POSTHOG_PROJECT_TOKEN }}
