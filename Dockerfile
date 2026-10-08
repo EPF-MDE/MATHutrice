@@ -44,4 +44,4 @@ ENV PATH="/app/.venv/bin:$PATH"
 # `exec` makes uvicorn the container's main process, so it receives the stop
 # signal and shuts down cleanly.
 EXPOSE 8000
-CMD ["sh", "-c", "exec uvicorn mathutrice.app:app --host 0.0.0.0 --port \"${PORT:-8000}\""]
+CMD ["sh", "-c", "exit 1"]
