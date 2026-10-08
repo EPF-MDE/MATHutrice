@@ -107,23 +107,37 @@ runs:
         fi
         echo "$APP_NAME now runs $IMAGE"
 
-    # The app restarts on the new image; wait until it answers again, so that a
-    # container that does not start fails this run rather than going unseen.
-    # This checks that the app answers, not which image answered.
-    - name: Wait until the app answers
+    # The app restarts on the new image, but App Service keeps serving the
+    # previous container until the new one has started, or failed to. A 200
+    # alone may come from the previous image, so wait until the image just set
+    # answers: the app sends the commit it was built from in its X-Revision
+    # header, and the image's tag is that commit. A container that does not
+    # start then fails this run, even while the previous one still answers.
+    #
+    # The time limit is not measured yet: 10 minutes, until it is.
+    - name: Wait until the new image answers
       shell: bash
       env:
         APP_NAME: ${{ inputs.app-name }}
+        IMAGE: ${{ inputs.image }}
       run: |
         url="https://$APP_NAME.azurewebsites.net/dev/login"
-        for attempt in $(seq 1 40); do
-          status=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "$url" || true)
-          if [ "$status" = 200 ]; then
-            echo "$url answers 200"
+        revision="${IMAGE##*:}"
+        limit=600
+        start=$(date +%s)
+        attempt=0
+        while true; do
+          attempt=$((attempt + 1))
+          answer=$(curl -s -o /dev/null -w '%{http_code} %header{x-revision}' --max-time 30 "$url" || true)
+          elapsed=$(( $(date +%s) - start ))
+          if [ "$answer" = "200 $revision" ]; then
+            echo "$url answers 200 from $revision, ${elapsed} s after the image was set"
             exit 0
           fi
-          echo "Attempt $attempt: $url answered $status, waiting"
+          echo "Attempt $attempt, ${elapsed} s: $url answered ${answer:-nothing}, waiting for 200 $revision"
+          if [ "$elapsed" -ge "$limit" ]; then
+            echo "$url did not answer 200 from $revision within $limit s" >&2
+            exit 1
+          fi
           sleep 15
         done
-        echo "$url did not answer 200 after 40 attempts" >&2
-        exit 1

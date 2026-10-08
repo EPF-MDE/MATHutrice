@@ -129,7 +129,11 @@ environment with real users signs in through Microsoft Entra ID and points
 
 - **Staging, on green.** A push whose `architecture` job passes is built into
   one image, tagged with its commit and pushed to GHCR
-  (`ghcr.io/epf-mde/mathutrice:<commit>`), then deployed to staging.
+  (`ghcr.io/epf-mde/mathutrice:<commit>`), then deployed to staging. The image
+  also holds its commit as `REVISION`, which the application sends back in the
+  `X-Revision` header of every response. The deploy passes only once
+  `/dev/login` answers `200` with that commit, so a previous container that is
+  still answering does not count.
 - **Production, by promotion only.** A run of the workflow started by hand reads
   the image staging runs and deploys that same image to production. It never
   builds one, so production only ever receives a commit staging has already

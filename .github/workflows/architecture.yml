@@ -76,7 +76,9 @@ jobs:
 
       # One image per commit, tagged with it, so that whatever runs can be
       # traced to the run that passed. A commit pushed twice is built once.
-      # The label links the package to this repository on GHCR.
+      # The label links the package to this repository on GHCR. REVISION is
+      # the commit again, inside the image: the app sends it back in an
+      # X-Revision header, so the deploy can tell which image answered.
       - name: Build and push the image, unless it exists
         id: image
         env:
@@ -90,6 +92,7 @@ jobs:
             docker build \
               --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
               --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+              --build-arg "REVISION=$GITHUB_SHA" \
               -t "$image" .
             docker push "$image"
           fi
