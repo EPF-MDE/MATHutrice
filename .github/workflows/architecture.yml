@@ -11,8 +11,8 @@
 #   built into one image, tagged with its commit, and deployed to staging.
 # - production: only by promotion, a run started by hand (workflow_dispatch). It
 #   deploys the image of staging's last green deploy, never one built for the
-#   occasion, so production only ever receives an image that staging has
-#   already run and seen answer.
+#   occasion, so production only ever receives an image whose deploy to staging
+#   passed.
 #
 # Both log in to Azure through OpenID Connect, as their GitHub Environment: no
 # Azure password or publish profile is stored anywhere.
@@ -133,7 +133,9 @@ jobs:
     steps:
       # The push runs on the deployed branch, newest first. The first one whose
       # `deploy to staging` job passed built and deployed the image tagged with
-      # its commit. With no such run, nothing is promoted.
+      # its commit. With no such run, nothing is promoted. Only the newest 100
+      # push runs are read. `deploy to staging` is the name of the job above:
+      # renaming it means renaming it here too.
       - name: Find the last run whose deploy to staging passed
         id: find
         env:
@@ -148,7 +150,7 @@ jobs:
             deploy=$(gh run view "$run" --json jobs --jq '.jobs[] | select(.name == "deploy to staging") | .conclusion')
             if [ "$deploy" = success ]; then
               image="ghcr.io/${GITHUB_REPOSITORY,,}:$sha"
-              echo "Run $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$run deployed commit $sha to staging, and staging answered"
+              echo "Run $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$run, commit $sha: deploy to staging passed"
               echo "Promoting $image"
               echo "image=$image" >> "$GITHUB_OUTPUT"
               exit 0
