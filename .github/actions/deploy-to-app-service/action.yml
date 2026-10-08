@@ -114,7 +114,13 @@ runs:
     # header, and the image's tag is that commit. A container that does not
     # start then fails this run, even while the previous one still answers.
     #
-    # The time limit is not measured yet: 10 minutes, until it is.
+    # The time limit comes from measurement. OcéENS's and MATHutrice's staging
+    # apps share one App Service plan. On 8 October 2026, a new image took
+    # 246 s, 317 s and 350 s from "now runs" to its own 200, in this job's log.
+    # The two slowest started while the other app was starting too. Starting
+    # again an image the app had already pulled took 76 to 125 s, over 12
+    # starts, so most of the wait is pulling the image. The limit is twice the
+    # slowest start, 350 s: 700 s.
     - name: Wait until the new image answers
       shell: bash
       env:
@@ -123,7 +129,7 @@ runs:
       run: |
         url="https://$APP_NAME.azurewebsites.net/dev/login"
         revision="${IMAGE##*:}"
-        limit=600
+        limit=700
         start=$(date +%s)
         attempt=0
         while true; do
