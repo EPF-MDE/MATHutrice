@@ -57,7 +57,7 @@ jobs:
   deploy-staging:
     name: deploy to staging
     needs: architecture
-    if: github.event_name == 'push' && github.ref == 'refs/heads/course-2026-worked-example-lab3-pipeline'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/course-2026-worked-example-lab3-signals-promotion'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -144,7 +144,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          DEPLOY_BRANCH: course-2026-worked-example-lab3-pipeline
+          DEPLOY_BRANCH: course-2026-worked-example-lab3-signals-promotion
         run: |
           runs=$(gh run list --workflow architecture.yml --branch "$DEPLOY_BRANCH" --event push --limit 100 \
             --json databaseId,headSha --jq '.[] | "\(.databaseId) \(.headSha)"')
