@@ -282,6 +282,20 @@ app.add_middleware(
         max_age=3600,
 )
 
+# Le commit dont l'image a été construite (Dockerfile, `ARG REVISION`).
+# Hors d'une image, "unknown".
+REVISION = os.getenv("REVISION", "unknown")
+
+
+@app.middleware("http")
+async def send_revision(request: Request, call_next):
+    """Ajouté en dernier, donc le plus externe : dit sur chaque réponse,
+    redirections comprises, de quel commit l'image a été construite.
+    """
+    response = await call_next(request)
+    response.headers["X-Revision"] = REVISION
+    return response
+
 
 # ------------------------------------------------------------------
 # Paths
