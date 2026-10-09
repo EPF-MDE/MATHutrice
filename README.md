@@ -135,12 +135,13 @@ environment with real users signs in through Microsoft Entra ID and points
   `/dev/login` answers `200` with that commit, so a previous container that is
   still answering does not count.
 - **Production, by promotion only.** A run of the workflow started by hand reads
-  the image staging runs and deploys that same image to production. It never
-  builds one, so production only ever receives a commit staging has already
-  received.
+  the workflow's push runs on this branch, newest first, and deploys the image of
+  the first whose `deploy to staging` job passed to production. It never builds
+  one, so production only ever receives an image whose deploy to staging passed.
+  With no such run, it deploys nothing.
 
 ```sh
-gh workflow run architecture.yml --ref <branch>   # promote staging's image to production
+gh workflow run architecture.yml --ref <branch>   # promote staging's last green deploy to production
 ```
 
 Each environment's settings and secrets live in the GitHub Environment of the
