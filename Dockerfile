@@ -40,6 +40,13 @@ USER app
 
 ENV PATH="/app/.venv/bin:$PATH"
 
+# The commit the image is built from, given at build time
+# (`--build-arg REVISION=…`). The app sends it back in the `X-Revision` header
+# of every response, so a deploy knows which image answers, not only that one
+# does. Last, so that it keeps the layers above it cached.
+ARG REVISION=unknown
+ENV REVISION=$REVISION
+
 # The host gives the port in PORT; without one, the port the smoke test uses.
 # `exec` makes uvicorn the container's main process, so it receives the stop
 # signal and shuts down cleanly.
